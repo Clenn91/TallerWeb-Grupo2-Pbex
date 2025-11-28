@@ -104,15 +104,16 @@ export const getDashboardMetrics = async (
         as: 'productionRecord',
         where: whereClause,
         required: true,
+        attributes: [], // No incluir columnas del modelo relacionado
       },
     ],
     attributes: [
-      [sequelize.fn('AVG', sequelize.col('waste_percentage')), 'avgWastePercentage'],
-      [sequelize.fn('COUNT', sequelize.col('id')), 'totalControls'],
+      [sequelize.fn('AVG', sequelize.col('QualityControl.waste_percentage')), 'avgWastePercentage'],
+      [sequelize.fn('COUNT', sequelize.col('QualityControl.id')), 'totalControls'],
       [
         sequelize.fn(
           'COUNT',
-          sequelize.literal("CASE WHEN approved = true THEN 1 END")
+          sequelize.literal("CASE WHEN \"QualityControl\".approved = true THEN 1 END")
         ),
         'approvedControls',
       ],
@@ -126,12 +127,14 @@ export const getDashboardMetrics = async (
       {
         model: QualityControl,
         as: 'qualityControl',
+        attributes: [], // No incluir columnas del modelo relacionado
         include: [
           {
             model: ProductionRecord,
             as: 'productionRecord',
             where: whereClause,
             required: true,
+            attributes: [], // No incluir columnas del modelo relacionado
           },
         ],
         required: true,

@@ -11,6 +11,9 @@ const Certificates = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [formData, setFormData] = useState({
     productId: '',
     productionRecordId: '',
@@ -65,12 +68,30 @@ const Certificates = () => {
       onSuccess: () => {
         toast.success('Certificado rechazado');
         queryClient.invalidateQueries('certificates');
+        setShowRejectModal(false);
+        setSelectedCertificate(null);
+        setRejectionReason('');
       },
       onError: (error: any) => {
         toast.error(error.response?.data?.message || 'Error al rechazar certificado');
       },
     }
   );
+
+  const handleRejectClick = (certificate: Certificate) => {
+    setSelectedCertificate(certificate);
+    setShowRejectModal(true);
+  };
+
+  const handleRejectSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!rejectionReason.trim()) {
+      toast.error('Debe proporcionar un motivo de rechazo');
+      return;
+    }
+    if (!selectedCertificate) return;
+    rejectMutation.mutate({ id: selectedCertificate.id, reason: rejectionReason });
+  };
 
   const createMutation = useMutation(
     (data: any) => certificateAPI.create(data),
@@ -233,12 +254,7 @@ const Certificates = () => {
                           Aprobar
                         </button>
                         <button
-                          onClick={() => {
-                            const reason = prompt('Motivo del rechazo:');
-                            if (reason) {
-                              rejectMutation.mutate({ id: certificate.id, reason });
-                            }
-                          }}
+                          onClick={() => handleRejectClick(certificate)}
                           className="btn btn-danger text-xs"
                         >
                           Rechazar
@@ -264,6 +280,62 @@ const Certificates = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal de rechazo */}
+      {showRejectModal && selectedCertificate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4">Rechazar Certificado</h2>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                <span className="font-medium">Código:</span> {selectedCertificate.code}
+              </p>
+              <p className="text-sm text-gray-600 mb-2">
+                <span className="font-medium">Producto:</span> {selectedCertificate.product?.name || 'N/A'}
+              </p>
+              <p className="text-sm text-gray-600">
+                <span className="font-medium">Lote:</span> {selectedCertificate.productionRecord?.lotNumber || 'N/A'}
+              </p>
+            </div>
+            <form onSubmit={handleRejectSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Motivo del Rechazo *
+                </label>
+                <textarea
+                  className="input w-full"
+                  rows={4}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Describa el motivo del rechazo..."
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setSelectedCertificate(null);
+                    setRejectionReason('');
+                  }}
+                  className="btn btn-secondary"
+                  disabled={rejectMutation.isLoading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-danger"
+                  disabled={rejectMutation.isLoading}
+                >
+                  {rejectMutation.isLoading ? 'Rechazando...' : 'Confirmar Rechazo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal de creación */}
       {showCreateModal && (

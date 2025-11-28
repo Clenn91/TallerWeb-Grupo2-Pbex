@@ -89,20 +89,32 @@ const Home = () => {
           {slides.length > 1 && (
             <>
               <button
-                className="slider-control prev absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors"
-                onClick={prevSlide}
+                className="slider-control prev absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors z-20 cursor-pointer pointer-events-auto"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  prevSlide();
+                }}
+                type="button"
+                aria-label="Slide anterior"
               >
                 <i className="fas fa-chevron-left"></i>
               </button>
               <button
-                className="slider-control next absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors"
-                onClick={nextSlide}
+                className="slider-control next absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-colors z-20 cursor-pointer pointer-events-auto"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextSlide();
+                }}
+                type="button"
+                aria-label="Slide siguiente"
               >
                 <i className="fas fa-chevron-right"></i>
               </button>
 
               {/* Slider Indicators */}
-              <div className="slider-indicators absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
+              <div className="slider-indicators absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
                 {slides.map((_, index) => (
                   <button
                     key={index}
@@ -112,6 +124,8 @@ const Home = () => {
                         : 'bg-white/50 hover:bg-white/75'
                     }`}
                     onClick={() => goToSlide(index)}
+                    type="button"
+                    aria-label={`Ir al slide ${index + 1}`}
                   ></button>
                 ))}
               </div>

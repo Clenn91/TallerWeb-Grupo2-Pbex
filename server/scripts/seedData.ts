@@ -14,6 +14,48 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Funciones auxiliares para generar descripciones
+const getDefectDescription = (defectType: string): string => {
+  const descriptions: Record<string, string> = {
+    mancha: "Manchas visibles en la superficie del producto",
+    rebaba: "Rebabas detectadas en los bordes del producto",
+    incompleto: "Producto incompleto, falta de material en algunas áreas",
+    deformacion: "Deformación detectada en la estructura del producto",
+    rayon: "Rayones superficiales que afectan la apariencia",
+    otro: "Otro tipo de defecto detectado durante la inspección",
+  };
+  return (
+    descriptions[defectType] ||
+    "Defecto detectado durante el control de calidad"
+  );
+};
+
+const getCorrectiveAction = (severity: string): string => {
+  const actions: Record<string, string> = {
+    baja: "Revisión de proceso y ajuste menor en parámetros de producción",
+    media: "Implementación de medidas correctivas y capacitación al personal",
+    alta: "Parada temporal de línea, revisión completa y reentrenamiento",
+    critica:
+      "Suspensión de producción, auditoría completa y plan de acción inmediato",
+  };
+  return actions[severity] || "Acción correctiva implementada";
+};
+
+const getNonConformityDescription = (severity: string): string => {
+  const descriptions: Record<string, string> = {
+    baja: "Desviación menor detectada en especificaciones de peso. No afecta funcionalidad.",
+    media:
+      "Producto no cumple con especificaciones de diámetro. Requiere revisión del proceso.",
+    alta: "Fallo crítico en control de calidad. Merma excesiva detectada en lote completo.",
+    critica:
+      "No conformidad crítica: producto presenta defectos estructurales que comprometen seguridad.",
+  };
+  return (
+    descriptions[severity] ||
+    "No conformidad detectada durante el control de calidad"
+  );
+};
+
 const seedData = async (): Promise<void> => {
   try {
     console.log("Iniciando carga de datos de ejemplo...\n");
@@ -54,7 +96,7 @@ const seedData = async (): Promise<void> => {
       },
     });
 
-    const assistant = await User.findOrCreate({
+    const [assistant] = await User.findOrCreate({
       where: { username: "asistente" },
       defaults: {
         username: "asistente",
@@ -654,26 +696,44 @@ const seedData = async (): Promise<void> => {
     }
     console.log("✓ Productos creados");
 
-    // Crear registros de producción de ejemplo
+    // Crear registros de producción
     console.log("Creando registros de producción...");
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
     const productionRecords = [];
-    for (let i = 0; i < 5; i++) {
+    const shifts = Object.values(SHIFTS);
+    const users = [assistant, _supervisor, _admin];
+
+    // Crear ~25 registros de producción distribuidos en las últimas 3 semanas
+    for (let i = 0; i < 25; i++) {
       const product = createdProducts[i % createdProducts.length];
+      const daysAgo = Math.floor(i / 3); // Distribuir en días
+      const productionDate = new Date(today);
+      productionDate.setDate(productionDate.getDate() - daysAgo);
+
+      const shift = shifts[i % shifts.length];
+      const user = users[i % users.length];
+      const lineNumber = (i % 5) + 1;
+
+      // Variar las cantidades de producción
+      const baseProduced = 800 + i * 50;
+      const approvedRate = 0.92 + (i % 10) * 0.005; // Entre 92% y 97%
+      const totalApproved = Math.floor(baseProduced * approvedRate);
+      const totalRejected = baseProduced - totalApproved;
+
       const record = await ProductionRecord.create({
         productId: product.id,
-        userId: assistant[0].id,
-        lotNumber: `LOTE-${Date.now()}-${i}`,
-        productionDate: i < 2 ? today : yesterday,
-        shift: Object.values(SHIFTS)[i % 3] as any,
-        productionLine: `Línea ${(i % 3) + 1}`,
-        totalProduced: 1000 + i * 100,
-        totalApproved: 950 + i * 95,
-        totalRejected: 50 + i * 5,
-        notes: `Registro de ejemplo ${i + 1}`,
+        userId: user.id,
+        lotNumber: `LOTE-${productionDate
+          .toISOString()
+          .split("T")[0]
+          .replace(/-/g, "")}-${String(i + 1).padStart(3, "0")}`,
+        productionDate: productionDate.toISOString().split("T")[0] as any,
+        shift: shift as any,
+        productionLine: `Línea ${lineNumber}`,
+        totalProduced: baseProduced,
+        totalApproved: totalApproved,
+        totalRejected: totalRejected,
+        notes: i % 3 === 0 ? `Producción normal del turno ${shift}` : null,
       });
       productionRecords.push(record);
     }
@@ -681,91 +741,224 @@ const seedData = async (): Promise<void> => {
 
     // Crear controles de calidad
     console.log("Creando controles de calidad...");
-    for (let i = 0; i < 3; i++) {
+    const qualityControls = [];
+    const defectTypes = Object.values(DEFECT_TYPES);
+
+    // Crear ~18 controles de calidad con diferentes características
+    for (let i = 0; i < 18; i++) {
       const record = productionRecords[i];
+      const product = await Product.findByPk(record.productId);
+      const alertThreshold = parseFloat(String(product?.alertThreshold || 5.0));
+
+      // Variar el wastePercentage: algunos normales, algunos que generan alertas
+      let wastePercentage: number;
+      if (i < 12) {
+        // Controles normales (bajo threshold)
+        wastePercentage = 2.5 + (i % 8) * 0.3; // Entre 2.5% y 4.9%
+      } else {
+        // Controles que generan alertas (sobre threshold)
+        wastePercentage = alertThreshold + 0.5 + ((i - 12) % 4) * 0.8; // Entre threshold+0.5 y threshold+2.9
+      }
+
+      // Aprobar aproximadamente el 70% de los controles
+      const approved = i < 13;
+
       const qualityControl = await QualityControl.create({
         productionRecordId: record.id,
-        userId: assistant[0].id,
-        weight: 500 + i * 10,
-        diameter: 200 + i * 5,
-        height: 300 + i * 10,
-        wastePercentage: 3.5 + i * 0.5,
-        approved: i < 2,
-        notes: `Control de calidad ${i + 1}`,
+        userId: users[i % users.length].id,
+        weight: 450 + i * 15 + (i % 3) * 5,
+        diameter: 180 + i * 3 + (i % 2) * 2,
+        height: 280 + i * 8 + (i % 4) * 3,
+        width: i % 2 === 0 ? 150 + i * 2 : null,
+        wastePercentage: parseFloat(wastePercentage.toFixed(2)),
+        approved: approved,
+        notes: approved
+          ? `Control aprobado. Merma dentro de parámetros.`
+          : `Control rechazado. Merma fuera de especificaciones.`,
       });
+      qualityControls.push(qualityControl);
 
-      // Crear defectos asociados
-      if (i > 0) {
-        await Defect.create({
-          qualityControlId: qualityControl.id,
-          defectType: DEFECT_TYPES.REBABA as any,
-          quantity: 10 + i * 5,
-          description: "Rebabas en el borde",
-        });
-        await Defect.create({
-          qualityControlId: qualityControl.id,
-          defectType: DEFECT_TYPES.MANCHA as any,
-          quantity: 5 + i * 2,
-          description: "Manchas en la superficie",
-        });
+      // Crear defectos para controles rechazados y algunos aprobados
+      if (!approved || (i % 5 === 0 && approved)) {
+        const numDefects = !approved ? 2 + (i % 3) : 1; // Más defectos en rechazados
+        for (let j = 0; j < numDefects; j++) {
+          const defectType = defectTypes[(i + j) % defectTypes.length];
+          await Defect.create({
+            qualityControlId: qualityControl.id,
+            defectType: defectType as any,
+            quantity: 5 + (i % 10) + j * 3,
+            description: getDefectDescription(defectType as string),
+          });
+        }
       }
     }
     console.log("✓ Controles de calidad creados");
 
-    // Crear certificado de ejemplo
+    // Crear certificados
     console.log("Creando certificados...");
-    if (productionRecords[0]) {
-      const qualityControl = await QualityControl.findOne({
-        where: { productionRecordId: productionRecords[0].id },
-      });
+    const approvedControls = qualityControls.filter((qc) => qc.approved);
+    let certCounter = 1;
 
-      if (qualityControl) {
-        await Certificate.create({
-          code: `CERT-${Date.now()}`,
-          productId: productionRecords[0].productId,
-          productionRecordId: productionRecords[0].id,
-          qualityControlId: qualityControl.id,
-          requestedBy: assistant[0].id,
-          status: "pendiente",
-        });
+    // Crear ~10 certificados con diferentes estados
+    for (let i = 0; i < Math.min(10, approvedControls.length); i++) {
+      const qualityControl = approvedControls[i];
+      const record = await ProductionRecord.findByPk(
+        qualityControl.productionRecordId
+      );
+      if (!record) continue;
+
+      let status: "pendiente" | "aprobado" | "rechazado";
+      let approvedBy: number | null = null;
+      let approvedAt: Date | null = null;
+      let rejectionReason: string | null = null;
+
+      if (i < 4) {
+        // 4 certificados pendientes
+        status = "pendiente";
+      } else if (i < 8) {
+        // 4 certificados aprobados
+        status = "aprobado";
+        approvedBy = _supervisor.id;
+        approvedAt = new Date();
+        approvedAt.setDate(approvedAt.getDate() - (8 - i));
+      } else {
+        // 2 certificados rechazados
+        status = "rechazado";
+        approvedBy = _supervisor.id;
+        approvedAt = new Date();
+        approvedAt.setDate(approvedAt.getDate() - (10 - i));
+        rejectionReason =
+          "No cumple con los estándares de calidad requeridos. Se requiere revisión adicional.";
       }
+
+      await Certificate.create({
+        code: `CERT-${new Date().getFullYear()}-${String(
+          certCounter++
+        ).padStart(4, "0")}`,
+        productId: record.productId,
+        productionRecordId: record.id,
+        qualityControlId: qualityControl.id,
+        requestedBy: users[i % users.length].id,
+        approvedBy: approvedBy,
+        status: status,
+        approvedAt: approvedAt,
+        rejectionReason: rejectionReason,
+      });
     }
     console.log("✓ Certificados creados");
 
-    // Crear alerta de ejemplo
+    // Crear alertas
     console.log("Creando alertas...");
-    if (productionRecords[1]) {
-      const qualityControl = await QualityControl.findOne({
-        where: { productionRecordId: productionRecords[1].id },
-      });
+    let alertCounter = 0;
 
-      if (qualityControl && qualityControl.wastePercentage > 5) {
+    // Crear alertas para controles con wastePercentage > threshold
+    for (const qualityControl of qualityControls) {
+      const record = await ProductionRecord.findByPk(
+        qualityControl.productionRecordId
+      );
+      if (!record) continue;
+
+      const product = await Product.findByPk(record.productId);
+      const alertThreshold = parseFloat(String(product?.alertThreshold || 5.0));
+      const wastePercentage = parseFloat(
+        String(qualityControl.wastePercentage || 0)
+      );
+
+      if (wastePercentage > alertThreshold) {
+        let status: "activa" | "resuelta" | "descartada";
+        let resolvedBy: number | null = null;
+        let resolvedAt: Date | null = null;
+        let resolutionNotes: string | null = null;
+
+        if (alertCounter < 3) {
+          // 3 alertas activas
+          status = "activa";
+        } else if (alertCounter < 6) {
+          // 3 alertas resueltas
+          status = "resuelta";
+          resolvedBy = _supervisor.id;
+          resolvedAt = new Date();
+          resolvedAt.setDate(resolvedAt.getDate() - (6 - alertCounter));
+          resolutionNotes =
+            "Alerta resuelta. Se implementaron medidas correctivas en la línea de producción.";
+        } else {
+          // 1 alerta descartada
+          status = "descartada";
+          resolvedBy = _supervisor.id;
+          resolvedAt = new Date();
+          resolvedAt.setDate(resolvedAt.getDate() - 2);
+          resolutionNotes =
+            "Alerta descartada. Falsa alarma debido a error en medición.";
+        }
+
         await Alert.create({
-          productId: productionRecords[1].productId,
-          productionRecordId: productionRecords[1].id,
+          productId: record.productId,
+          productionRecordId: record.id,
           qualityControlId: qualityControl.id,
           alertType: "waste_threshold",
-          threshold: 5.0,
-          actualValue: qualityControl.wastePercentage,
-          status: "activa",
+          threshold: alertThreshold,
+          actualValue: wastePercentage,
+          status: status,
+          resolvedBy: resolvedBy,
+          resolvedAt: resolvedAt,
+          resolutionNotes: resolutionNotes,
+          emailSent: status === "activa" ? false : true,
         });
+
+        alertCounter++;
+        if (alertCounter >= 7) break; // Máximo 7 alertas
       }
     }
     console.log("✓ Alertas creadas");
 
-    // Crear no conformidad de ejemplo
+    // Crear no conformidades
     console.log("Creando no conformidades...");
-    const ncCode = `NC-${Date.now()}`;
-    await NonConformity.create({
-      code: ncCode,
-      productId: createdProducts[0].id,
-      productionRecordId: productionRecords[0].id,
-      reportedBy: assistant[0].id,
-      description:
-        "No conformidad de ejemplo: producto no cumple con especificaciones de peso",
-      severity: "media",
-      status: "abierta",
-    });
+    const severities: Array<"baja" | "media" | "alta" | "critica"> = [
+      "baja",
+      "media",
+      "alta",
+      "critica",
+    ];
+    const ncStatuses: Array<
+      "abierta" | "en_revision" | "resuelta" | "cerrada"
+    > = ["abierta", "en_revision", "resuelta", "cerrada"];
+    let ncCounter = 1;
+
+    // Crear ~4 no conformidades con diferentes severidades y estados
+    for (let i = 0; i < 4; i++) {
+      const record = productionRecords[i * 5];
+      const severity = severities[i];
+      const status = ncStatuses[i];
+
+      let resolvedBy: number | null = null;
+      let resolvedAt: Date | null = null;
+      let correctiveAction: string | null = null;
+
+      if (status === "resuelta" || status === "cerrada") {
+        resolvedBy = _supervisor.id;
+        resolvedAt = new Date();
+        resolvedAt.setDate(resolvedAt.getDate() - (4 - i));
+        correctiveAction = `Acción correctiva implementada: ${getCorrectiveAction(
+          severity
+        )}`;
+      }
+
+      await NonConformity.create({
+        code: `NC-${new Date().getFullYear()}-${String(ncCounter++).padStart(
+          4,
+          "0"
+        )}`,
+        productId: record.productId,
+        productionRecordId: record.id,
+        reportedBy: users[i % users.length].id,
+        description: getNonConformityDescription(severity),
+        severity: severity,
+        status: status,
+        correctiveAction: correctiveAction,
+        resolvedBy: resolvedBy,
+        resolvedAt: resolvedAt,
+      });
+    }
     console.log("✓ No conformidades creadas");
 
     console.log("\n✓ Datos de ejemplo cargados correctamente");
