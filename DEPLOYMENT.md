@@ -119,7 +119,7 @@ npm install
 ```bash
 cd server
 npm run init-db
-npm run seed  # Opcional: datos de ejemplo
+npm run seed  # Poblar base de datos.
 ```
 
 > ℹ️ **Recuerda:** El script `init-db` solo sincroniza modelos (tablas). Asegúrate de haber creado la base de datos `pbex_quality_db` (o la que definas en `.env`) antes de ejecutarlo.
