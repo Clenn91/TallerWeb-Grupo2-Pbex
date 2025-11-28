@@ -2,6 +2,14 @@
 
 Sistema web centralizado para digitalizar y optimizar los procesos de control de calidad y producción de **Plásticos Básicos de Exportación S.A.C.**, empresa manufacturera de plásticos con 35 años de experiencia.
 
+## Integrantes - Grupo 1
+
+- Quiñonez Rivera, Esteban
+- Palomino Julián Alex Marcelo
+- Arias Chumpitaz, Giovanni
+- Layme Moya, Victor
+- Espinoza Carlos, Diego Sebastian
+
 ## ✅ Estado actual del proyecto
 
 - **Backend:** TypeScript + Express + Sequelize + PostgreSQL, listo para Node.js 18+
