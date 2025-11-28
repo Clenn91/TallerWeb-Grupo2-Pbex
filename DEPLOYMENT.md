@@ -6,12 +6,13 @@ Esta guía detalla cómo desplegar el sistema en diferentes escenarios: local, n
 
 ## ✅ Estado Actual del Proyecto
 
-- Backend TypeScript + Express + Sequelize listo para Node.js 18+.
-- Frontend TypeScript + React + Vite con dashboards y módulos productivos terminados.
-- Matriz de roles/permisos y middleware de autorización activos en producción.
-- Scripts `init-db`/`seed` crean tablas y datos, pero requieren que la base exista previamente.
-- Despliegues probados en local, PostgreSQL administrado y plataformas como Heroku/Railway.
-- TypeScript configurado en backend y frontend para type-safety completo.
+- **Backend:** TypeScript + Express + Sequelize + PostgreSQL, listo para Node.js 18+
+- **Frontend:** TypeScript + React + Vite + TailwindCSS con dashboards y módulos productivos
+- **Autenticación:** JWT con roles y permisos (Asistente, Supervisor, Administrador, Gerencia, Visitante)
+- **Base de Datos:** Scripts `init-db` y `seed` para inicializar tablas y datos de ejemplo
+- **Despliegue:** Soporta 3 modos: local completo, local con BD en nube, y todo en nube
+- **TypeScript:** Configurado en backend y frontend con type-safety completo
+- **Scripts:** `init-db`, `seed`, `migrate` (preparado), `build`, `dev`, `type-check`
 
 ---
 
@@ -286,11 +287,11 @@ web: cd server && npm start
 }
 ```
 
-**Modificar `server/app.js` para servir archivos estáticos del frontend:**
+**Modificar `server/app.ts` para servir archivos estáticos del frontend:**
 
-Agrega antes de `app.use(notFound)`:
+Agrega antes de `app.use(notFound)` en `server/app.ts`:
 
-```javascript
+```typescript
 // Servir archivos estáticos del frontend en producción
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../client/dist")));
@@ -299,6 +300,8 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 ```
+
+> 📌 **Nota:** Asegúrate de que el frontend esté compilado (`cd client && npm run build`) antes de desplegar.
 
 #### 3.2.2. Instalar Heroku CLI
 
@@ -341,7 +344,7 @@ heroku config:set API_PREFIX=/api
 heroku config
 ```
 
-**Nota:** Heroku Postgres automáticamente crea variables `DATABASE_URL`. Necesitarás modificar `server/config/database.js` para usar `DATABASE_URL` si está disponible, o configurar manualmente:
+**Nota:** Heroku Postgres automáticamente crea variables `DATABASE_URL`. El sistema actual usa `DB_*_CLOUD` para la configuración. Si prefieres usar `DATABASE_URL`, necesitarías modificar `server/config/database.ts` para parsear la URL. Por ahora, configura manualmente:
 
 ```bash
 heroku config:set DB_HOST_CLOUD=tu-host
@@ -360,20 +363,40 @@ git commit -m "Initial commit"
 git push heroku main
 ```
 
-#### 3.2.7. Inicializar Base de Datos
+#### 3.2.7. Compilar y Desplegar
 
 ```bash
-heroku run npm run init-db
-heroku run npm run seed  # Opcional
+# Compilar TypeScript del backend
+cd server
+npm run build
+
+# Compilar frontend
+cd ../client
+npm run build
+
+# Volver a la raíz y hacer commit
+cd ..
+git add .
+git commit -m "Build para producción"
+git push heroku main
+```
+
+#### 3.2.8. Inicializar Base de Datos
+
+```bash
+heroku run npm run init-db --prefix server
+heroku run npm run seed --prefix server  # Opcional
 ```
 
 > ℹ️ Heroku crea la instancia PostgreSQL, pero `npm run init-db` solo genera/actualiza las tablas del proyecto; no recrea la base. Verifica que el addon esté aprovisionado y accesible antes de este paso.
 
-#### 3.2.8. Abrir Aplicación
+#### 3.2.9. Abrir Aplicación
 
 ```bash
 heroku open
 ```
+
+> 💡 **Nota TypeScript:** En producción, Heroku ejecutará `npm start` que usa el código compilado de `dist/`. Asegúrate de que el build se ejecute correctamente durante el despliegue.
 
 ### 3.3. Despliegue en Railway (Alternativa)
 
@@ -391,10 +414,13 @@ Railway es más simple y moderno:
 
 1. Conecta tu repositorio
 2. Configura:
-   - Build Command: `cd client && npm run build`
-   - Output Directory: `client/dist`
-   - Install Command: `cd client && npm install`
+   - **Root Directory:** `client`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+   - **Install Command:** `npm install`
 3. Agrega variable de entorno: `VITE_API_URL=https://tu-backend.com/api`
+
+> 📌 **Nota:** Vercel detecta automáticamente Vite/React. Asegúrate de configurar la variable `VITE_API_URL` para que el frontend se conecte al backend.
 
 **Backend en Railway/Heroku:**
 
@@ -504,7 +530,16 @@ npm install
 **Solución:**
 
 - Crea la base de datos manualmente antes de ejecutar `init-db`
-- O modifica `initDatabase.js` para crear la BD si no existe (requiere permisos)
+- El script `init-db` solo sincroniza tablas, no crea la base de datos
+- En servicios administrados (Heroku, Railway), la base se crea automáticamente al agregar el servicio PostgreSQL
+
+### Error: "Cannot find module" en producción
+
+**Solución:**
+
+- Asegúrate de haber ejecutado `npm run build` antes de `npm start`
+- Verifica que el directorio `dist/` exista y contenga los archivos compilados
+- En Heroku, el build se ejecuta automáticamente si tienes un `package.json` en la raíz con script `postinstall`
 
 ---
 
@@ -519,4 +554,6 @@ Si encuentras problemas, verifica:
 
 ---
 
-**Última actualización:** Enero 2025
+**Última actualización:** Enero 2025  
+**Versión del Proyecto:** 3.0.0  
+**Stack:** Node.js 18+ | TypeScript 5.3+ | Express | Sequelize | PostgreSQL 14+ | React 18+ | Vite

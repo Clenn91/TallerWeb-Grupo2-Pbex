@@ -293,6 +293,15 @@ Este documento detalla qué puede hacer cada rol en el Sistema de Gestión de Ca
 
 4. **Alertas Automáticas**: El sistema genera alertas automáticamente cuando las mermas superan los umbrales configurados, independientemente del rol.
 
+5. **Creación de Usuarios**:
+
+   - **Supervisor** puede crear: Asistente de Calidad, Supervisor, Gerencia
+   - **Administrador** puede crear: Asistente de Calidad, Supervisor, Gerencia, Administrador
+   - **NO se pueden crear usuarios con rol Visitante** (el acceso a productos es público y no requiere cuenta)
+
+6. **Usuarios Inactivos**: Los usuarios marcados como `active: false` no pueden autenticarse, incluso si tienen credenciales válidas.
+
 ---
 
-**Última actualización:** Enero 2025
+**Última actualización:** Enero 2025  
+**Versión del Sistema:** 3.0.0

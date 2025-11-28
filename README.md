@@ -4,11 +4,12 @@ Sistema web centralizado para digitalizar y optimizar los procesos de control de
 
 ## ✅ Estado actual del proyecto
 
-- Backend Express + Sequelize listo para Node.js 18+.
-- Frontend React + Vite con dashboards y módulos productivos terminados.
-- Matriz de roles/permisos y middleware de autorización activos en producción.
-- Scripts `npm run init-db` / `npm run seed` sincronizan tablas y datos, pero requieren que la base de datos exista previamente (se crea manualmente).
-- Flujos de despliegue verificados en equipos locales, PostgreSQL administrado y plataformas como Heroku/Railway (ver `DEPLOYMENT.md`).
+- **Backend:** TypeScript + Express + Sequelize + PostgreSQL, listo para Node.js 18+
+- **Frontend:** TypeScript + React + Vite + TailwindCSS con dashboards y módulos productivos
+- **Autenticación:** JWT con sistema de roles y permisos completo
+- **Base de Datos:** Scripts `init-db` y `seed` para inicializar tablas y datos de ejemplo
+- **Despliegue:** Soporta 3 modos de despliegue (local, nube parcial, nube total)
+- **TypeScript:** Configurado en backend y frontend con type-safety completo
 
 ## 🎯 Descripción
 
@@ -38,24 +39,28 @@ Pbex3/
 **Backend:**
 
 - Node.js v18+
-- TypeScript
+- TypeScript 5.3+
 - Express.js
 - Sequelize (ORM)
 - PostgreSQL 14+
 - JWT (Autenticación)
 - Puppeteer (Generación de PDFs)
 - Nodemailer (Emails opcionales)
+- Sharp (Procesamiento de imágenes)
+- Express Rate Limit (Seguridad)
 
 **Frontend:**
 
 - React 18+
-- TypeScript
+- TypeScript 5.3+
 - Vite
 - TailwindCSS
 - React Router
 - React Query
 - Recharts (Gráficos)
 - React Hook Form + Zod
+- Axios (HTTP Client)
+- React Hot Toast (Notificaciones)
 
 ## 👥 Roles de Usuario
 
@@ -196,7 +201,7 @@ Si ejecutaste `npm run seed`, puedes usar estos usuarios:
 
 ### Variables de Entorno
 
-El archivo `.env` en `server/` debe contener:
+El archivo `.env` en `server/` debe contener (ver `server/env.example` para plantilla completa):
 
 ```env
 # Modo de despliegue: 'local' o 'cloud'
@@ -232,7 +237,15 @@ MAIL_PORT=587
 MAIL_USER=tu_email@gmail.com
 MAIL_PASSWORD=tu_contraseña_app
 MAIL_FROM=tu_email@gmail.com
+
+# Puppeteer (PDFs)
+PUPPETEER_EXECUTABLE_PATH=
+
+# Alertas
+ALERT_DEFAULT_THRESHOLD=5.0
 ```
+
+> 📌 **Importante:** Copia `server/env.example` a `server/.env` y completa los valores según tu entorno.
 
 ### Alternar entre Local y Nube
 
@@ -262,36 +275,47 @@ Para instrucciones detalladas de despliegue, consulta:
 
 ```bash
 npm install        # Instalar dependencias (incluye TypeScript)
-npm run build      # Compilar TypeScript a JavaScript
-npm start          # Iniciar en producción (ejecuta código compilado)
-npm run dev        # Iniciar en desarrollo con hot-reload (tsx watch)
-npm run init-db    # Crear y sincronizar tablas (la base debe existir)
-npm run seed       # Poblar con datos de ejemplo
-npm run type-check # Verificar tipos sin compilar
+npm run build      # Compilar TypeScript a JavaScript (genera dist/)
+npm start          # Iniciar en producción (ejecuta dist/server.js)
+npm run dev        # Iniciar en desarrollo con hot-reload (tsx watch server.ts)
+npm run init-db    # Crear y sincronizar tablas (la base debe existir previamente)
+npm run seed       # Poblar con datos de ejemplo (usuarios, productos, etc.)
+npm run migrate    # Script de migración (preparado para futuras migraciones)
+npm run type-check # Verificar tipos TypeScript sin compilar
 ```
 
 ### Frontend (`client/`)
 
 ```bash
 npm install        # Instalar dependencias (incluye TypeScript)
-npm run dev        # Iniciar servidor de desarrollo
-npm run build      # Compilar TypeScript y construir para producción
-npm run preview    # Previsualizar build de producción
-npm run type-check # Verificar tipos sin compilar
+npm run dev        # Iniciar servidor de desarrollo (Vite dev server)
+npm run build      # Compilar TypeScript y construir para producción (genera dist/)
+npm run preview    # Previsualizar build de producción localmente
+npm run type-check # Verificar tipos TypeScript sin compilar
+npm run lint       # Ejecutar linter (ESLint)
 ```
+
+> 💡 **Nota:** En desarrollo, tanto el backend (`tsx watch`) como el frontend (Vite) compilan TypeScript automáticamente. Para producción, ejecuta `npm run build` en ambos antes de desplegar.
 
 ## 🗄️ Modelo de Datos
 
 ### Entidades Principales
 
-- **Users**: Usuarios, roles, contraseñas
-- **Products**: Catálogo de productos
-- **ProductionRecords**: Registros de producción
+- **Users**: Usuarios, roles, contraseñas encriptadas
+- **Products**: Catálogo de productos con imágenes y especificaciones
+- **ProductionRecords**: Registros de producción por turno y línea
 - **QualityControls**: Controles de calidad por lote
-- **Defects**: Tipos y cantidades de mermas
-- **Certificates**: Certificados generados
-- **Alerts**: Alertas configuradas y eventos
-- **NonConformities**: Incidencias registradas
+- **Defects**: Tipos y cantidades de mermas/defectos
+- **Certificates**: Certificados de calidad generados en PDF
+- **Alerts**: Alertas automáticas cuando mermas superan umbrales
+- **NonConformities**: No conformidades registradas y resueltas
+
+### Relaciones
+
+- Un **ProductionRecord** puede tener múltiples **QualityControls**
+- Un **QualityControl** puede tener múltiples **Defects**
+- Un **Certificate** está asociado a un **QualityControl** y un **Product**
+- Las **Alerts** se generan automáticamente basadas en **Defects**
 
 ## 🐛 Solución de Problemas
 
@@ -305,6 +329,12 @@ npm run type-check # Verificar tipos sin compilar
 ### Error al generar PDFs
 
 - Puppeteer requiere Chromium. Si hay problemas, puedes especificar la ruta a Chrome instalado en `PUPPETEER_EXECUTABLE_PATH` en `.env`
+- En producción (Heroku, Railway), puede ser necesario agregar buildpacks específicos para Puppeteer
+
+### Error: "Cannot find module" en producción
+
+- Asegúrate de haber ejecutado `npm run build` en el backend antes de `npm start`
+- Verifica que el directorio `server/dist/` exista con los archivos compilados
 
 ## 📄 Licencia
 
@@ -322,4 +352,4 @@ npm run type-check # Verificar tipos sin compilar
 
 **Versión:** 3.0.0  
 **Última actualización:** Enero 2025  
-**Stack:** Node.js + TypeScript + Express + PostgreSQL + React + TypeScript + Vite
+**Stack:** Node.js 18+ | TypeScript 5.3+ | Express | Sequelize | PostgreSQL 14+ | React 18+ | Vite | TailwindCSS
