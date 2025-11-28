@@ -6,11 +6,12 @@ Esta guía detalla cómo desplegar el sistema en diferentes escenarios: local, n
 
 ## ✅ Estado Actual del Proyecto
 
-- Backend Express + Sequelize listo para Node.js 18+.
-- Frontend React + Vite con dashboards y módulos productivos terminados.
+- Backend TypeScript + Express + Sequelize listo para Node.js 18+.
+- Frontend TypeScript + React + Vite con dashboards y módulos productivos terminados.
 - Matriz de roles/permisos y middleware de autorización activos en producción.
 - Scripts `init-db`/`seed` crean tablas y datos, pero requieren que la base exista previamente.
 - Despliegues probados en local, PostgreSQL administrado y plataformas como Heroku/Railway.
+- TypeScript configurado en backend y frontend para type-safety completo.
 
 ---
 
@@ -31,6 +32,7 @@ Esta guía detalla cómo desplegar el sistema en diferentes escenarios: local, n
 - Node.js 18+ instalado
 - PostgreSQL 14+ instalado y corriendo localmente
 - npm 9.0+
+- TypeScript 5.3+ (se instala automáticamente con `npm install`)
 
 ### Pasos
 
@@ -128,15 +130,19 @@ npm run seed  # Opcional: datos de ejemplo
 
 ```bash
 cd server
-npm run dev
+npm run dev  # Usa tsx watch para hot-reload de TypeScript
 ```
+
+> 💡 **Nota TypeScript:** El comando `npm run dev` usa `tsx watch` que compila y ejecuta TypeScript en tiempo real. Para producción, primero ejecuta `npm run build` y luego `npm start`.
 
 **Terminal 2 - Frontend:**
 
 ```bash
 cd client
-npm run dev
+npm run dev  # Vite compila TypeScript automáticamente
 ```
+
+> 💡 **Nota TypeScript:** Vite compila TypeScript automáticamente en desarrollo. Para producción, ejecuta `npm run build` que primero verifica tipos y luego construye.
 
 #### 1.7. Verificar
 

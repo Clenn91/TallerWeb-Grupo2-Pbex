@@ -38,6 +38,7 @@ Pbex3/
 **Backend:**
 
 - Node.js v18+
+- TypeScript
 - Express.js
 - Sequelize (ORM)
 - PostgreSQL 14+
@@ -48,6 +49,7 @@ Pbex3/
 **Frontend:**
 
 - React 18+
+- TypeScript
 - Vite
 - TailwindCSS
 - React Router
@@ -107,6 +109,7 @@ Pbex3/
 - Node.js 18 o superior
 - PostgreSQL 14+ (local o en la nube)
 - npm 9.0+
+- TypeScript 5.3+ (se instala automáticamente con `npm install`)
 
 ### Instalación
 
@@ -258,18 +261,23 @@ Para instrucciones detalladas de despliegue, consulta:
 ### Backend (`server/`)
 
 ```bash
-npm start          # Iniciar en producción
-npm run dev        # Iniciar en desarrollo (nodemon)
-npm run init-db    # Crear y/y Sincronizar tablas (la base debe existir)
+npm install        # Instalar dependencias (incluye TypeScript)
+npm run build      # Compilar TypeScript a JavaScript
+npm start          # Iniciar en producción (ejecuta código compilado)
+npm run dev        # Iniciar en desarrollo con hot-reload (tsx watch)
+npm run init-db    # Crear y sincronizar tablas (la base debe existir)
 npm run seed       # Poblar con datos de ejemplo
+npm run type-check # Verificar tipos sin compilar
 ```
 
 ### Frontend (`client/`)
 
 ```bash
+npm install        # Instalar dependencias (incluye TypeScript)
 npm run dev        # Iniciar servidor de desarrollo
-npm run build      # Construir para producción
+npm run build      # Compilar TypeScript y construir para producción
 npm run preview    # Previsualizar build de producción
+npm run type-check # Verificar tipos sin compilar
 ```
 
 ## 🗄️ Modelo de Datos
@@ -314,4 +322,4 @@ npm run preview    # Previsualizar build de producción
 
 **Versión:** 3.0.0  
 **Última actualización:** Enero 2025  
-**Stack:** Node.js + Express + PostgreSQL + React + Vite
+**Stack:** Node.js + TypeScript + Express + PostgreSQL + React + TypeScript + Vite
